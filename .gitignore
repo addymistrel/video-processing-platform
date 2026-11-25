@@ -1,0 +1,77 @@
+# Dependencies
+node_modules/
+.pnpm-store/
+
+# Build output
+dist/
+build/
+out/
+*.tsbuildinfo
+
+# Turborepo
+.turbo/
+
+# Test and coverage
+coverage/
+.nyc_output/
+playwright-report/
+test-results/
+
+# Environment files (keep the examples)
+.env
+.env.*
+!.env.example
+**/.env
+**/.env.*
+!**/.env.example
+
+# Logs
+*.log
+npm-debug.log*
+pnpm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+logs/
+
+# OS files
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Editors and IDEs (keep the shared VS Code config)
+.idea/
+*.swp
+*.swo
+.vscode/*
+!.vscode/settings.json
+!.vscode/extensions.json
+
+# Temporary files
+tmp/
+temp/
+*.tmp
+
+# Docker and local infra data
+infra/**/data/
+*.local
+
+# Secrets and keys
+*.pem
+*.key
+*.p12
+*.pfx
+secrets/
+
+# Local media used for testing uploads
+*.mp4
+*.mov
+*.mkv
+*.avi
+*.webm
+sample-videos/
+
+# Misc
+.cache/
+.eslintcache
+.next/
+.vite/
