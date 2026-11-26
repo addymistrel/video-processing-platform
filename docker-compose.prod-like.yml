@@ -1,0 +1,9 @@
+services:
+  nginx:
+    restart: always
+  rabbitmq:
+    restart: always
+  redis:
+    restart: always
+  storage:
+    restart: always

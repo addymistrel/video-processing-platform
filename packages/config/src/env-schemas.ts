@@ -26,14 +26,19 @@ export const rabbitEnvSchema = z.object({
   RABBITMQ_PREFETCH: z.coerce.number().int().min(1).default(1),
 });
 
-export const minioEnvSchema = z.object({
-  MINIO_ENDPOINT: z.string().min(1),
-  MINIO_ACCESS_KEY: z.string().min(1),
-  MINIO_SECRET_KEY: z.string().min(1),
-  MINIO_USE_SSL: z
+export const objectStorageEnvSchema = z.object({
+  S3_ENDPOINT: z.url(),
+  S3_PUBLIC_ENDPOINT: z.url(),
+  S3_REGION: z.string().min(1).default('us-east-1'),
+  S3_ACCESS_KEY: z.string().min(1),
+  S3_SECRET_KEY: z.string().min(1),
+  S3_FORCE_PATH_STYLE: z
     .enum(['true', 'false'])
-    .default('false')
+    .default('true')
     .transform((value) => value === 'true'),
+  S3_BUCKET_ORIGINALS: z.string().min(1).default('originals'),
+  S3_BUCKET_PROCESSED: z.string().min(1).default('processed'),
+  S3_BUCKET_THUMBNAILS: z.string().min(1).default('thumbnails'),
 });
 
 export const jwtVerifyEnvSchema = z.object({

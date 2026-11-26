@@ -1,0 +1,147 @@
+name: video-platform
+
+x-defaults: &defaults
+  restart: unless-stopped
+  init: true
+  security_opt:
+    - no-new-privileges:true
+  logging:
+    driver: json-file
+    options:
+      max-size: '10m'
+      max-file: '3'
+
+networks:
+  edge: {}
+  internal: {}
+  data:
+    internal: true
+
+volumes:
+  rabbitmq-data: {}
+  redis-data: {}
+  storage-data: {}
+
+services:
+  nginx:
+    <<: *defaults
+    image: nginxinc/nginx-unprivileged:stable-alpine
+    ports:
+      - '${NGINX_PORT:-8080}:8080'
+    volumes:
+      - ./infra/nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./infra/nginx/conf.d:/etc/nginx/conf.d:ro
+      - ./infra/nginx/snippets:/etc/nginx/snippets:ro
+    read_only: true
+    tmpfs:
+      - /tmp
+      - /var/cache/nginx:uid=101,gid=101,mode=0755
+    cap_drop:
+      - ALL
+    networks:
+      - edge
+      - internal
+    healthcheck:
+      test: ['CMD', 'wget', '-q', '--spider', 'http://127.0.0.1:8080/nginx-health']
+      interval: 10s
+      timeout: 3s
+      retries: 5
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 256M
+
+  rabbitmq:
+    <<: *defaults
+    image: rabbitmq:4-management
+    hostname: rabbitmq
+    environment:
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER:?set RABBITMQ_USER in .env}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD:?set RABBITMQ_PASSWORD in .env}
+      RABBITMQ_DEFAULT_VHOST: ${RABBITMQ_VHOST:-video}
+    volumes:
+      - rabbitmq-data:/var/lib/rabbitmq
+      - ./infra/rabbitmq/rabbitmq.conf:/etc/rabbitmq/conf.d/10-platform.conf:ro
+    networks:
+      - data
+    stop_grace_period: 60s
+    healthcheck:
+      test: ['CMD', 'rabbitmq-diagnostics', '-q', 'ping']
+      interval: 15s
+      timeout: 10s
+      retries: 5
+      start_period: 40s
+    deploy:
+      resources:
+        limits:
+          cpus: '1.5'
+          memory: 1G
+
+  redis:
+    <<: *defaults
+    image: redis:8-alpine
+    user: redis
+    command:
+      - sh
+      - -c
+      - exec redis-server /usr/local/etc/redis/redis.conf --requirepass "$$REDIS_PASSWORD"
+    environment:
+      REDIS_PASSWORD: ${REDIS_PASSWORD:?set REDIS_PASSWORD in .env}
+      REDISCLI_AUTH: ${REDIS_PASSWORD}
+    volumes:
+      - redis-data:/data
+      - ./infra/redis/redis.conf:/usr/local/etc/redis/redis.conf:ro
+    cap_drop:
+      - ALL
+    cap_add:
+      - CHOWN
+      - SETUID
+      - SETGID
+    networks:
+      - data
+    healthcheck:
+      test: ['CMD-SHELL', 'redis-cli ping | grep -q PONG']
+      interval: 10s
+      timeout: 3s
+      retries: 5
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 384M
+
+  storage:
+    <<: *defaults
+    image: rustfs/rustfs:latest
+    environment:
+      RUSTFS_VOLUMES: /data
+      RUSTFS_ADDRESS: 0.0.0.0:9000
+      RUSTFS_ACCESS_KEY: ${S3_ACCESS_KEY:?set S3_ACCESS_KEY in .env}
+      RUSTFS_SECRET_KEY: ${S3_SECRET_KEY:?set S3_SECRET_KEY in .env}
+    volumes:
+      - storage-data:/data
+    networks:
+      - data
+    deploy:
+      resources:
+        limits:
+          cpus: '2.0'
+          memory: 1G
+
+  storage-init:
+    image: amazon/aws-cli:latest
+    restart: 'no'
+    entrypoint: ['/bin/sh', '/init/create-buckets.sh']
+    environment:
+      AWS_ACCESS_KEY_ID: ${S3_ACCESS_KEY}
+      AWS_SECRET_ACCESS_KEY: ${S3_SECRET_KEY}
+      AWS_DEFAULT_REGION: ${S3_REGION:-us-east-1}
+      S3_ENDPOINT: http://storage:9000
+      S3_BUCKETS: ${S3_BUCKETS:-originals processed thumbnails}
+    volumes:
+      - ./infra/storage/create-buckets.sh:/init/create-buckets.sh:ro
+    depends_on:
+      - storage
+    networks:
+      - data
