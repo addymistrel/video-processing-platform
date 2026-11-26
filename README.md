@@ -18,3 +18,13 @@ React, Node.js, TypeScript, RabbitMQ, Neon Postgres, Redis, MinIO, FFmpeg, Docke
 - `apps/frontend/` React app
 - `infra/` Docker, Nginx and Kubernetes files
 - `docs/` diagrams and guidelines
+
+## Running the infrastructure
+
+    pnpm infra:up       # start rabbitmq, redis, storage and nginx
+    pnpm infra:ps       # show container health
+    pnpm infra:logs     # follow logs
+    pnpm infra:down     # stop containers, keep data
+    pnpm infra:reset    # stop and delete all data volumes
+
+Copy `.env.example` to `.env` and fill in the passwords first.
