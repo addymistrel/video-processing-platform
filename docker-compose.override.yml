@@ -1,0 +1,16 @@
+services:
+  rabbitmq:
+    ports:
+      - '127.0.0.1:5672:5672'
+      - '127.0.0.1:15672:15672'
+  redis:
+    ports:
+      - '127.0.0.1:6379:6379'
+  storage:
+    ports:
+      - '127.0.0.1:9000:9000'
+      - '127.0.0.1:9001:9001'
+
+networks:
+  data:
+    internal: false
